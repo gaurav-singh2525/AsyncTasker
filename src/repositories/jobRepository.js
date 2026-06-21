@@ -1,5 +1,19 @@
 const pool = require("../config/db");
 
+function mapRow(row) {
+    return {
+        jobId: row.job_id,
+        type: row.type,
+        payload: row.payload,
+        status: row.status,
+        attempts: row.attempts,
+        maxAttempts: row.max_attempts,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        retryAt: row.retry_at,
+    };
+}
+
 async function create(job) {
     const query = `
         INSERT INTO jobs (
@@ -36,19 +50,6 @@ async function findById(jobId) {
     }
 
     return mapRow(result.rows[0]);
-}
-
-function mapRow(row) {
-    return {
-        jobId: row.job_id,
-        type: row.type,
-        payload: row.payload,
-        status: row.status,
-        attempts: row.attempts,
-        maxAttempts: row.max_attempts,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-    };
 }
 
 async function incrementAttempts(jobId) {
@@ -88,7 +89,44 @@ async function updateStatus(
 
 }
 
+async function updateRetryAt(
+    jobId,
+    retryAt
+) {
+    const query = `
+        UPDATE jobs
+        SET retry_at = $2,
+            updated_at = NOW()
+        WHERE job_id = $1
+        RETURNING *;
+    `;
 
+    const result = await pool.query(
+        query,
+        [jobId, retryAt]
+    );
+
+    return mapRow(result.rows[0]);
+}
+
+async function findRecoverableJobs() {
+    const query = `
+        SELECT *
+        FROM jobs
+        WHERE status IN (
+            'queued',
+            'active',
+            'delayed'
+        );
+    `;
+
+    const result =
+        await pool.query(query);
+
+    return result.rows.map(
+        mapRow
+    );
+}
 
 
 module.exports = {
@@ -96,4 +134,6 @@ module.exports = {
     findById,
     incrementAttempts,
     updateStatus,
+    updateRetryAt,
+    findRecoverableJobs,
 };

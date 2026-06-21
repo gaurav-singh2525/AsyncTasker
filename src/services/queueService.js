@@ -1,20 +1,23 @@
-const { redisClient } =
-    require("../config/redis");
+const {
+    redisClient,
+    blockingRedisClient
+} = require("../config/redis");
 
-const QUEUE_NAME = "jobs:waiting";
+
 const WAITING_QUEUE = "jobs:waiting";
 const ACTIVE_QUEUE = "jobs:active";
+const DELAYED_QUEUE = "jobs:delayed";
 
 async function enqueue(jobId) {
     await redisClient.rPush(
-        QUEUE_NAME,
+        WAITING_QUEUE,
         jobId
     );
 }
 
 async function dequeue() {
     const result = await redisClient.blPop(
-        QUEUE_NAME,
+        WAITING_QUEUE,
         0
     );
 
@@ -22,32 +25,66 @@ async function dequeue() {
 }
 
 async function moveToActive() {
-    const result =
-        await redisClient.blMove(
-            WAITING_QUEUE,
-            ACTIVE_QUEUE,
-            "RIGHT",
-            "LEFT",
-            0
-        )
 
-    return result;
+    return await blockingRedisClient.blMove(
+        WAITING_QUEUE,
+        ACTIVE_QUEUE,
+        "RIGHT",
+        "LEFT",
+        0
+    );
 }
 
 
-async function removeFromActive(
-    jobId
-) {
-    await redisClient.lRem(
+async function removeFromActive(jobId) {
+    return await redisClient.lRem(
         ACTIVE_QUEUE,
         1,
         jobId
     );
 }
 
+async function addToDelayed(
+    jobId,
+    retryAt
+) {
+    await redisClient.zAdd(
+        DELAYED_QUEUE,
+        [
+            {
+                score: retryAt,
+                value: jobId,
+            },
+        ]
+    );
+}
+
+
+async function getReadyDelayedJobs(
+    now
+) {
+    return await redisClient.zRangeByScore(
+        DELAYED_QUEUE,
+        0,
+        now
+    );
+}
+
+
+async function removeFromDelayed(
+    jobId
+) {
+    await redisClient.zRem(
+        DELAYED_QUEUE,
+        jobId
+    );
+}
 module.exports = {
     enqueue,
     dequeue,
     moveToActive,
     removeFromActive,
+    addToDelayed,
+    getReadyDelayedJobs,
+    removeFromDelayed,
 };

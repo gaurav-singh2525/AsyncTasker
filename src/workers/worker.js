@@ -12,9 +12,23 @@ const handlers = require(
     "./handlerRegistry"
 );
 
+const { redisClient } =
+    require("../config/redis");
+
 const { connectRedis } = require("../config/redis");
 
 const CONCURRENCY = 5;
+
+
+async function bootstrap() {
+    for (
+        let i = 0;
+        i < CONCURRENCY;
+        i++
+    ) {
+        void startConsumer();
+    }
+}
 
 async function startConsumer() {
     while (true) {
@@ -33,18 +47,14 @@ async function startConsumer() {
             await processJob(jobId);
 
         } catch (error) {
-            console.error(error);
-        }
-    }
-}
+            console.error(
+                "OUTER ERROR STACK:"
+            );
 
-async function bootstrap() {
-    for (
-        let i = 0;
-        i < CONCURRENCY;
-        i++
-    ) {
-        void startConsumer();
+            console.error(
+                error.stack
+            );
+        }
     }
 }
 
@@ -109,24 +119,44 @@ async function processJob(jobId) {
         const updatedJob =
             await jobRepository.findById(jobId);
 
+
         if (
             updatedJob.attempts <
             updatedJob.maxAttempts
         ) {
 
+            console.log(`attempts:${updatedJob.attempts} `);
+
+            const delay =
+                Math.pow(
+                    2,
+                    updatedJob.attempts
+                ) * 5000;
+
+            const retryAt =
+                Date.now() + delay;
+
             await jobRepository.updateStatus(
                 jobId,
-                "queued"
+                "delayed"
+            );
+
+            await jobRepository.updateRetryAt(
+                jobId,
+                new Date(retryAt)
             );
 
             await queueService.removeFromActive(
                 jobId
             );
 
-            await queueService.enqueue(jobId);
+            await queueService.addToDelayed(
+                jobId,
+                retryAt
+            );
 
             console.log(
-                `Job ${jobId} requeued`
+                `Job ${jobId} delayed for ${delay} ms`
             );
 
         } else {
@@ -148,10 +178,5 @@ async function processJob(jobId) {
 
 }
 
-async function main() {
-    await connectRedis();
-    await bootstrap();
-}
 
-main();
-
+module.exports = bootstrap;
