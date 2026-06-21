@@ -1,5 +1,13 @@
 require("dotenv").config();
 
+const JOB_TIMEOUT_MS =
+    Number(
+        process.env.JOB_TIMEOUT_MS
+    );
+
+const withTimeout =
+    require("../utils/withTimeout");
+
 const queueService = require(
     "../services/queueService"
 );
@@ -94,7 +102,10 @@ async function processJob(jobId) {
     }
 
     try {
-        await handler(job);
+        await withTimeout(
+            handler(job),
+            JOB_TIMEOUT_MS
+        );
 
         await jobRepository.updateStatus(
             jobId,

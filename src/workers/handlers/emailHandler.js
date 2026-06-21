@@ -1,26 +1,33 @@
-// async function emailHandler(job) {
-//     console.log(
-//         `[EMAIL] Processing job ${job.jobId}`
-//     );
+module.exports = async function emailHandler(job) {
 
-//     await new Promise((resolve) =>
-//         setTimeout(resolve, 5000)
-//     );
-
-//     console.log(
-//         `[EMAIL] Completed job ${job.jobId}`
-//     );
-// }
-
-// module.exports = emailHandler;
-
-async function emailHandler(job) {
+    const {
+        to,
+        subject
+    } = job.payload;
 
     console.log(
-        `Processing ${job.jobId}`
+        `[EMAIL] Sending email to ${to}`
     );
 
-    throw new Error("SMTP Down");
-}
+    await new Promise(
+        resolve =>
+            setTimeout(resolve, 2000)
+    );
 
-module.exports = emailHandler;
+    const shouldFail =
+        Math.random() < 0.3;
+
+    if (shouldFail) {
+        throw new Error(
+            "SMTP Server Unavailable"
+        );
+    }
+
+    console.log(
+        `[EMAIL] Subject: ${subject}`
+    );
+
+    console.log(
+        `[EMAIL] Email sent successfully`
+    );
+};
