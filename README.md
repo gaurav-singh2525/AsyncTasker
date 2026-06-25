@@ -10,33 +10,33 @@ AsyncTasker enables reliable background task execution through concurrent worker
 
 ### Reliable Job Processing
 
-* Asynchronous background task execution
-* Redis-backed waiting queue
-* PostgreSQL persistence layer
-* Configurable worker concurrency
+- Asynchronous background task execution
+- Redis-backed waiting queue
+- PostgreSQL persistence layer
+- Configurable worker concurrency
 
 ### Fault Tolerance
 
-* Automatic retry mechanism
-* Exponential backoff scheduling
-* Delayed job execution
-* Job timeout handling
-* Worker crash recovery
-* Service restart recovery
+- Automatic retry mechanism
+- Exponential backoff scheduling
+- Delayed job execution
+- Job timeout handling
+- Worker crash recovery
+- Service restart recovery
 
 ### Queue Management
 
-* Waiting queue
-* Active queue
-* Delayed queue
-* Failed jobs tracking
-* Job lifecycle management
+- Waiting queue
+- Active queue
+- Delayed queue
+- Failed jobs tracking
+- Job lifecycle management
 
 ### Extensible Architecture
 
-* Modular handler registry
-* Multiple job types support
-* Easy addition of new task handlers
+- Modular handler registry
+- Multiple job types support
+- Easy addition of new task handlers
 
 ---
 
@@ -107,21 +107,21 @@ completed delayed
 
 ### Backend
 
-* Node.js
-* Express.js
+- Node.js
+- Express.js
 
 ### Database
 
-* PostgreSQL
+- PostgreSQL
 
 ### Queue Layer
 
-* Redis
+- Redis
 
 ### Concurrency
 
-* Worker Pool Architecture
-* Blocking Queue Consumption (BLMOVE)
+- Worker Pool Architecture
+- Blocking Queue Consumption (BLMOVE)
 
 ---
 
@@ -226,7 +226,7 @@ JOB_TIMEOUT_MS=5000
 Implementation uses:
 
 ```js
-Promise.race()
+Promise.race();
 ```
 
 to detect long-running tasks and prevent workers from being blocked indefinitely.
@@ -332,26 +332,113 @@ GET /jobs/:jobId
 
 ## Project Highlights
 
-* Concurrent worker pool architecture
-* Redis-backed asynchronous processing
-* Exponential backoff retries
-* Delayed scheduling with Redis Sorted Sets
-* Crash recovery and queue reconstruction
-* Timeout handling
-* Fault-tolerant job execution
-* PostgreSQL as source of truth
+- Concurrent worker pool architecture
+- Redis-backed asynchronous processing
+- Exponential backoff retries
+- Delayed scheduling with Redis Sorted Sets
+- Crash recovery and queue reconstruction
+- Timeout handling
+- Fault-tolerant job execution
+- PostgreSQL as source of truth
+
+---
+
+## Benchmarks
+
+This repository includes a small end-to-end benchmarking suite under `benchmarks/`.
+The goal is to measure **AsyncTasker’s performance** (worker pool + Redis queues + PostgreSQL persistence),
+not Redis/PostgreSQL in isolation.
+
+### How to run
+
+1. Start required services (as described in the main README):
+   - Redis
+   - PostgreSQL
+2. Start the API server for API latency:
+   ```bash
+   node server.js
+   ```
+3. Run the reduced benchmark suite (most important 4 benchmarks):
+   ```bash
+   node benchmarks/runAll.js
+   ```
+
+Benchmark results are appended to `benchmarks/results.md`.
+
+### Methodology
+
+Key choices made to keep results meaningful and reproducible:
+
+- **Deterministic job handler**: the benchmarks use the `noop` handler by default to avoid external variability.
+- **Completion detection**: completion is determined by polling job `status` from PostgreSQL.
+- **Worker scaling**: benchmark varies `WORKER_CONCURRENCY` in the worker process while keeping workload fixed.
+- **Environment**: database and queue configuration are loaded from your local `.env`.
+
+### Hardware / Software Details
+
+- CPU: Intel i5-12450H
+- Cores / Threads: 12 Cores
+- RAM: 12GB
+- OS: Linux
+- Node.js: v24.12.0
+- Redis: Redis server v=7.0.15
+- PostgreSQL: Version 16.14
+
+### Results (latest run)
+
+#### Throughput
+
+| Jobs  | Workers | Elapsed (s) | Throughput (jobs/s) | Avg Job Latency (ms) |
+| ----- | ------- | ----------- | ------------------- | -------------------- |
+| 1000  | 5       | 1.65        | 605.75              | 1.65                 |
+| 5000  | 5       | 7.71        | 648.15              | 1.54                 |
+| 10000 | 5       | 15.15       | 659.99              | 1.52                 |
+
+#### Worker Scaling
+
+| Workers | Elapsed (s) | Throughput (jobs/s) | Scaling Efficiency |
+| ------- | ----------- | ------------------- | ------------------ |
+| 1       | 30.57       | 163.53              | 1.00               |
+| 2       | 17.61       | 283.86              | 0.87               |
+| 5       | 7.41        | 674.67              | 0.83               |
+| 10      | 4.57        | 1093.45             | 0.67               |
+
+#### API Latency (POST `/jobs`)
+
+| Metric  | Latency (ms) |
+| ------- | ------------ |
+| Average | 5.65         |
+| Median  | 5.78         |
+| P95     | 7.56         |
+| P99     | 8.46         |
+| Maximum | 12.43        |
+
+#### Recovery Performance
+
+| Jobs  | Recovered | Startup Time (s) | Recovery Throughput (jobs/s) | Waiting | Active | Delayed |
+| ----- | --------- | ---------------- | ---------------------------- | ------- | ------ | ------- |
+| 1000  | 1000      | 0.51             | 1973.43                      | 667     | 0      | 333     |
+| 5000  | 5000      | 2.32             | 2152.03                      | 3334    | 0      | 1999    |
+| 10000 | 10000     | 4.59             | 2176.89                      | 6667    | 0      | 5332    |
+
+### Interpretation (quick)
+
+- Throughput increases with workload size, with slightly varying jobs/sec as Redis/Postgres overhead amortizes.
+- Scaling efficiency decreases at higher worker counts, which is expected due to contention in the queue + persistence path.
+- API latency is low because `POST /jobs` only enqueues the job; execution happens asynchronously.
+- Recovery startup time scales sub-linearly with job volume in this run, indicating efficient rebuild/enqueue behavior.
 
 ---
 
 ## Future Improvements
 
-* Dead Letter Queue
-* Job Priorities
-* Scheduled Jobs
-* Metrics Dashboard
-* Distributed Workers
-* Rate Limiting
-* Web UI for Monitoring
+- Dead Letter Queue
+- Job Priorities
+- Scheduled Jobs
+- Metrics Dashboard
+- Distributed Workers
+- Rate Limiting
+- Web UI for Monitoring
 
 ---
 
@@ -359,14 +446,14 @@ GET /jobs/:jobId
 
 This project explores several distributed systems and backend engineering concepts:
 
-* Queue-based architectures
-* Concurrent worker systems
-* Fault tolerance
-* Retry strategies
-* Crash recovery
-* Redis data structures
-* Background task processing
-* System reliability engineering
+- Queue-based architectures
+- Concurrent worker systems
+- Fault tolerance
+- Retry strategies
+- Crash recovery
+- Redis data structures
+- Background task processing
+- System reliability engineering
 
 ---
 

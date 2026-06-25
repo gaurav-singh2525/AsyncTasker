@@ -25,7 +25,8 @@ const { redisClient } =
 
 const { connectRedis } = require("../config/redis");
 
-const CONCURRENCY = 5;
+const CONCURRENCY =
+    Number(process.env.WORKER_CONCURRENCY) || 5;
 
 
 async function bootstrap() {

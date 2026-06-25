@@ -4,7 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "benchmark": "node benchmarks/runAll.js",
+    "benchmark:throughput": "node benchmarks/benchmarkThroughput.js",
+    "benchmark:scaling": "node benchmarks/benchmarkWorkerScaling.js",
+    "benchmark:latency": "node benchmarks/benchmarkLatency.js",
+    "benchmark:recovery": "node benchmarks/benchmarkRecovery.js",
+    "benchmark:retry": "node benchmarks/benchmarkRetry.js",
+    "benchmark:queue": "node benchmarks/benchmarkQueue.js",
+    "benchmark:resources": "node benchmarks/benchmarkResources.js"
   },
   "keywords": [],
   "author": "",
